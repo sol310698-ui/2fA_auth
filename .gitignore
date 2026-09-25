@@ -1,0 +1,29 @@
+# Flutter / Dart
+.dart_tool/
+.packages
+build/
+.flutter-plugins
+.flutter-plugins-dependencies
+.pub-cache/
+.pub/
+
+# CI tarafından otomatik oluşturulan platform iskeleti (build.yml scaffold eder)
+/android/
+/ios/
+/linux/
+/macos/
+/windows/
+/web/
+
+# Gizli anahtarlar — ASLA commit'leme
+android/key.properties
+*.keystore
+*.jks
+
+# IDE
+.idea/
+*.iml
+.vscode/
+
+# OS
+.DS_Store
