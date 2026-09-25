@@ -50,7 +50,7 @@ class _ScanScreenState extends State<ScanScreen> {
           MobileScanner(
             controller: _controller,
             onDetect: _onDetect,
-            errorBuilder: (context, error) => Center(
+            errorBuilder: (context, error, child) => Center(
               child: Padding(
                 padding: const EdgeInsets.all(24),
                 child: Column(
