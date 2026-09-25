@@ -47,7 +47,27 @@ class _ScanScreenState extends State<ScanScreen> {
       ),
       body: Stack(
         children: [
-          MobileScanner(controller: _controller, onDetect: _onDetect),
+          MobileScanner(
+            controller: _controller,
+            onDetect: _onDetect,
+            errorBuilder: (context, error) => Center(
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.error_outline, color: Colors.red, size: 48),
+                    const SizedBox(height: 12),
+                    Text(
+                      'Kamera başlatılamadı:\n${error.errorCode}\n${error.errorDetails?.message ?? ''}',
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(color: Colors.white),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
           IgnorePointer(
             child: Center(
               child: Container(
