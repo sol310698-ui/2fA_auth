@@ -1,12 +1,14 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import 'package:provider/provider.dart';
 import '../models/otp_account.dart';
 import '../services/account_store.dart';
 import '../services/totp_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/code_ring.dart';
+import '../widgets/animated_code_text.dart';
 import 'add_account_screen.dart';
 import 'account_detail_screen.dart';
 
@@ -40,12 +42,14 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void _copy(String code, String name) {
+    HapticFeedback.lightImpact();
     Clipboard.setData(ClipboardData(text: code));
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text('$name kodu kopyalandı'),
         duration: const Duration(seconds: 1),
         behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       ),
     );
   }
@@ -66,20 +70,102 @@ class _HomeScreenState extends State<HomeScreen> {
     }).toList();
 
     return Scaffold(
-      appBar: AppBar(
-        title: _searching
-            ? TextField(
-                controller: _searchCtrl,
-                autofocus: true,
-                decoration: const InputDecoration(
-                  hintText: 'Ara...',
-                  border: InputBorder.none,
-                ),
-                onChanged: (v) => setState(() => _query = v),
-              )
-            : const Text('2FA Kimlik Doğrulayıcı'),
-        actions: [
-          IconButton(
+      extendBodyBehindAppBar: false,
+      body: Container(
+        decoration: AppTheme.heroGradientDecoration(context),
+        child: SafeArea(
+          child: Column(
+            children: [
+              _buildHeader(context, accounts.length),
+              Expanded(
+                child: accounts.isEmpty
+                    ? _EmptyState(hasQuery: _query.isNotEmpty)
+                        .animate()
+                        .fadeIn(duration: 400.ms)
+                    : ReorderableListView.builder(
+                        padding: const EdgeInsets.fromLTRB(14, 4, 14, 100),
+                        itemCount: accounts.length,
+                        onReorder: (oldI, newI) {
+                          if (_query.isNotEmpty) return;
+                          store.reorder(oldI, newI);
+                        },
+                        itemBuilder: (context, i) {
+                          final account = accounts[i];
+                          return _AccountTile(
+                            key: ValueKey(account.id),
+                            account: account,
+                            index: i,
+                            onCopy: _copy,
+                          );
+                        },
+                      ),
+              ),
+            ],
+          ),
+        ),
+      ),
+      floatingActionButton: _AnimatedFab(
+        onPressed: () => Navigator.of(context).push(
+          PageRouteBuilder(
+            pageBuilder: (_, anim, __) => const AddAccountScreen(),
+            transitionsBuilder: (_, anim, __, child) => SlideTransition(
+              position: Tween(begin: const Offset(0, 1), end: Offset.zero)
+                  .animate(CurvedAnimation(parent: anim, curve: Curves.easeOutCubic)),
+              child: child,
+            ),
+            transitionDuration: const Duration(milliseconds: 320),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildHeader(BuildContext context, int count) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 12, 20, 8),
+      child: Row(
+        children: [
+          Expanded(
+            child: _searching
+                ? TextField(
+                    controller: _searchCtrl,
+                    autofocus: true,
+                    decoration: InputDecoration(
+                      hintText: 'Ara...',
+                      filled: true,
+                      fillColor: Theme.of(context).cardColor,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(14),
+                        borderSide: BorderSide.none,
+                      ),
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 16),
+                    ),
+                    onChanged: (v) => setState(() => _query = v),
+                  ).animate().fadeIn(duration: 200.ms).slideX(begin: 0.1, end: 0)
+                : Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        '2FA Kimlik Doğrulayıcı',
+                        style: Theme.of(context)
+                            .textTheme
+                            .headlineSmall
+                            ?.copyWith(fontWeight: FontWeight.w700),
+                      ),
+                      Text(
+                        count == 0
+                            ? 'Hesap yok'
+                            : '$count hesap · canlı kodlar',
+                        style: Theme.of(context)
+                            .textTheme
+                            .bodySmall
+                            ?.copyWith(color: Colors.grey),
+                      ),
+                    ],
+                  ).animate().fadeIn(duration: 250.ms),
+          ),
+          const SizedBox(width: 8),
+          IconButton.filledTonal(
             icon: Icon(_searching ? Icons.close : Icons.search),
             onPressed: () => setState(() {
               _searching = !_searching;
@@ -91,30 +177,41 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ],
       ),
-      body: accounts.isEmpty
-          ? _EmptyState(hasQuery: _query.isNotEmpty)
-          : ReorderableListView.builder(
-              padding: const EdgeInsets.fromLTRB(12, 4, 12, 90),
-              itemCount: accounts.length,
-              onReorder: (oldI, newI) {
-                if (_query.isNotEmpty) return; // avoid confusing reorder while filtered
-                store.reorder(oldI, newI);
-              },
-              itemBuilder: (context, i) {
-                final account = accounts[i];
-                return _AccountTile(
-                  key: ValueKey(account.id),
-                  account: account,
-                  onCopy: _copy,
-                );
-              },
-            ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => Navigator.of(context).push(
-          MaterialPageRoute(builder: (_) => const AddAccountScreen()),
-        ),
-        icon: const Icon(Icons.add),
-        label: const Text('Hesap Ekle'),
+    );
+  }
+}
+
+class _AnimatedFab extends StatefulWidget {
+  final VoidCallback onPressed;
+  const _AnimatedFab({required this.onPressed});
+
+  @override
+  State<_AnimatedFab> createState() => _AnimatedFabState();
+}
+
+class _AnimatedFabState extends State<_AnimatedFab> with SingleTickerProviderStateMixin {
+  bool _pressed = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTapDown: (_) => setState(() => _pressed = true),
+      onTapUp: (_) {
+        setState(() => _pressed = false);
+        widget.onPressed();
+      },
+      onTapCancel: () => setState(() => _pressed = false),
+      child: AnimatedScale(
+        scale: _pressed ? 0.88 : 1,
+        duration: const Duration(milliseconds: 120),
+        curve: Curves.easeOut,
+        child: FloatingActionButton.extended(
+          onPressed: widget.onPressed,
+          icon: const Icon(Icons.qr_code_scanner_rounded),
+          label: const Text('Hesap Ekle'),
+        )
+            .animate(onPlay: (c) => c.repeat(reverse: true))
+            .shimmer(duration: 2400.ms, delay: 1200.ms, color: Colors.white.withValues(alpha: 0.25)),
       ),
     );
   }
@@ -122,14 +219,20 @@ class _HomeScreenState extends State<HomeScreen> {
 
 class _AccountTile extends StatelessWidget {
   final OtpAccount account;
+  final int index;
   final void Function(String code, String name) onCopy;
 
-  const _AccountTile({super.key, required this.account, required this.onCopy});
+  const _AccountTile({
+    super.key,
+    required this.account,
+    required this.index,
+    required this.onCopy,
+  });
 
   @override
   Widget build(BuildContext context) {
     final store = context.read<AccountStore>();
-    final color = AppTheme.colorFor(account.displayName);
+    final gradient = AppTheme.gradientFor(account.displayName);
 
     String code;
     Widget trailing;
@@ -141,20 +244,21 @@ class _AccountTile extends StatelessWidget {
       trailing = CodeRing(
         secondsRemaining: remaining,
         period: account.period,
-        color: color,
+        color: gradient.first,
       );
       onTap = () => onCopy(code, account.displayName);
     } else {
       code = TotpService.generateHotp(account);
       trailing = IconButton(
-        icon: const Icon(Icons.refresh),
+        icon: const Icon(Icons.refresh_rounded),
         tooltip: 'Sonraki kod',
-        onPressed: () => store.incrementHotpCounter(account.id),
+        onPressed: () {
+          HapticFeedback.selectionClick();
+          store.incrementHotpCounter(account.id);
+        },
       );
       onTap = () => onCopy(code, account.displayName);
     }
-
-    final formatted = _formatCode(code);
 
     return Dismissible(
       key: ValueKey('dismiss-${account.id}'),
@@ -162,13 +266,15 @@ class _AccountTile extends StatelessWidget {
       background: Container(
         alignment: Alignment.centerRight,
         padding: const EdgeInsets.only(right: 24),
+        margin: const EdgeInsets.symmetric(vertical: 6),
         decoration: BoxDecoration(
-          color: Colors.redAccent,
-          borderRadius: BorderRadius.circular(18),
+          color: AppTheme.danger,
+          borderRadius: BorderRadius.circular(22),
         ),
-        child: const Icon(Icons.delete, color: Colors.white),
+        child: const Icon(Icons.delete_rounded, color: Colors.white),
       ),
       confirmDismiss: (_) async {
+        HapticFeedback.mediumImpact();
         return await showDialog<bool>(
               context: context,
               builder: (ctx) => AlertDialog(
@@ -189,46 +295,98 @@ class _AccountTile extends StatelessWidget {
             false;
       },
       onDismissed: (_) => store.deleteAccount(account.id),
-      child: Card(
+      child: Container(
         margin: const EdgeInsets.symmetric(vertical: 6),
-        child: ListTile(
-          contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-          onTap: onTap,
-          onLongPress: () => Navigator.of(context).push(
-            MaterialPageRoute(builder: (_) => AccountDetailScreen(account: account)),
-          ),
-          leading: CircleAvatar(
-            backgroundColor: color,
-            child: Text(
-              account.displayName.isNotEmpty
-                  ? account.displayName[0].toUpperCase()
-                  : '?',
-              style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(22),
+          color: Theme.of(context).cardColor,
+          boxShadow: [
+            BoxShadow(
+              color: gradient.first.withValues(alpha: 0.10),
+              blurRadius: 16,
+              offset: const Offset(0, 6),
+            ),
+          ],
+        ),
+        child: Material(
+          color: Colors.transparent,
+          borderRadius: BorderRadius.circular(22),
+          child: InkWell(
+            borderRadius: BorderRadius.circular(22),
+            onTap: onTap,
+            onLongPress: () => Navigator.of(context).push(
+              PageRouteBuilder(
+                pageBuilder: (_, anim, __) => AccountDetailScreen(account: account),
+                transitionsBuilder: (_, anim, __, child) =>
+                    FadeTransition(opacity: anim, child: child),
+              ),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+              child: Row(
+                children: [
+                  Container(
+                    width: 46,
+                    height: 46,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      gradient: LinearGradient(
+                        colors: gradient,
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: gradient.first.withValues(alpha: 0.4),
+                          blurRadius: 10,
+                          offset: const Offset(0, 3),
+                        ),
+                      ],
+                    ),
+                    alignment: Alignment.center,
+                    child: Text(
+                      account.displayName.isNotEmpty
+                          ? account.displayName[0].toUpperCase()
+                          : '?',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 18,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          account.displayName,
+                          style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15),
+                        ),
+                        if (account.label.isNotEmpty && account.label != account.displayName)
+                          Text(
+                            account.label,
+                            style: TextStyle(fontSize: 11, color: Colors.grey.shade500),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        const SizedBox(height: 2),
+                        AnimatedCodeText(code: code, color: gradient.first),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  trailing,
+                ],
+              ),
             ),
           ),
-          title: Text(
-            account.displayName,
-            style: const TextStyle(fontWeight: FontWeight.w600),
-          ),
-          subtitle: Text(
-            formatted,
-            style: const TextStyle(
-              fontSize: 22,
-              fontWeight: FontWeight.bold,
-              letterSpacing: 2,
-              fontFeatures: [FontFeature.tabularFigures()],
-            ),
-          ),
-          trailing: trailing,
         ),
       ),
-    );
-  }
-
-  String _formatCode(String code) {
-    if (code.length <= 4) return code;
-    final mid = (code.length / 2).ceil();
-    return '${code.substring(0, mid)} ${code.substring(mid)}';
+    )
+        .animate(delay: (index * 45).ms)
+        .fadeIn(duration: 340.ms, curve: Curves.easeOut)
+        .slideY(begin: 0.12, end: 0, duration: 340.ms, curve: Curves.easeOutCubic);
   }
 }
 
@@ -244,12 +402,32 @@ class _EmptyState extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(
-              hasQuery ? Icons.search_off : Icons.shield_outlined,
-              size: 64,
-              color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.4),
-            ),
-            const SizedBox(height: 16),
+            Container(
+              width: 96,
+              height: 96,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: LinearGradient(
+                  colors: [
+                    AppTheme.primary.withValues(alpha: 0.18),
+                    AppTheme.accent.withValues(alpha: 0.18),
+                  ],
+                ),
+              ),
+              child: Icon(
+                hasQuery ? Icons.search_off_rounded : Icons.shield_moon_rounded,
+                size: 44,
+                color: AppTheme.primary,
+              ),
+            )
+                .animate(onPlay: (c) => c.repeat(reverse: true))
+                .scale(
+                  begin: const Offset(1, 1),
+                  end: const Offset(1.06, 1.06),
+                  duration: 1400.ms,
+                  curve: Curves.easeInOut,
+                ),
+            const SizedBox(height: 20),
             Text(
               hasQuery
                   ? 'Sonuç bulunamadı'

@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import 'package:provider/provider.dart';
 import 'package:uuid/uuid.dart';
 import '../models/otp_account.dart';
 import '../services/account_store.dart';
 import '../services/totp_service.dart';
+import '../theme/app_theme.dart';
 import 'scan_screen.dart';
 
 class AddAccountScreen extends StatefulWidget {
@@ -82,12 +84,54 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            FilledButton.icon(
-              onPressed: _scan,
-              icon: const Icon(Icons.qr_code_scanner),
-              label: const Text('QR Kod Tara'),
-              style: FilledButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 16)),
-            ),
+            Container(
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(18),
+                gradient: const LinearGradient(
+                  colors: [AppTheme.primary, AppTheme.accent],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: AppTheme.primary.withValues(alpha: 0.35),
+                    blurRadius: 18,
+                    offset: const Offset(0, 8),
+                  ),
+                ],
+              ),
+              child: Material(
+                color: Colors.transparent,
+                borderRadius: BorderRadius.circular(18),
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(18),
+                  onTap: _scan,
+                  child: const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 18),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.qr_code_scanner_rounded, color: Colors.white),
+                        SizedBox(width: 10),
+                        Text(
+                          'QR Kod Tara',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w700,
+                            fontSize: 16,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            )
+                .animate()
+                .fadeIn(duration: 300.ms)
+                .slideY(begin: 0.15, end: 0, curve: Curves.easeOutCubic)
+                .animate(onPlay: (c) => c.repeat(reverse: true))
+                .shimmer(delay: 900.ms, duration: 2200.ms, color: Colors.white.withValues(alpha: 0.3)),
             const SizedBox(height: 24),
             Row(
               children: const [
@@ -98,7 +142,7 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
                 ),
                 Expanded(child: Divider()),
               ],
-            ),
+            ).animate(delay: 100.ms).fadeIn(duration: 300.ms),
             const SizedBox(height: 16),
             Form(
               key: _formKey,
@@ -107,25 +151,25 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
                 children: [
                   TextFormField(
                     controller: _issuerCtrl,
-                    decoration: const InputDecoration(
+                    decoration: InputDecoration(
                       labelText: 'Servis adı (ör. Google, GitHub)',
-                      border: OutlineInputBorder(),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
                     ),
                   ),
                   const SizedBox(height: 12),
                   TextFormField(
                     controller: _labelCtrl,
-                    decoration: const InputDecoration(
+                    decoration: InputDecoration(
                       labelText: 'Hesap / e-posta',
-                      border: OutlineInputBorder(),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
                     ),
                   ),
                   const SizedBox(height: 12),
                   TextFormField(
                     controller: _secretCtrl,
-                    decoration: const InputDecoration(
+                    decoration: InputDecoration(
                       labelText: 'Gizli anahtar (Base32)',
-                      border: OutlineInputBorder(),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
                     ),
                     validator: (v) {
                       if (v == null || v.trim().isEmpty) return 'Zorunlu';
@@ -141,9 +185,9 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
                       Expanded(
                         child: DropdownButtonFormField<OtpType>(
                           value: _type,
-                          decoration: const InputDecoration(
+                          decoration: InputDecoration(
                             labelText: 'Tür',
-                            border: OutlineInputBorder(),
+                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
                           ),
                           items: const [
                             DropdownMenuItem(value: OtpType.totp, child: Text('TOTP (zaman)')),
@@ -156,9 +200,9 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
                       Expanded(
                         child: DropdownButtonFormField<int>(
                           value: _digits,
-                          decoration: const InputDecoration(
+                          decoration: InputDecoration(
                             labelText: 'Basamak',
-                            border: OutlineInputBorder(),
+                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
                           ),
                           items: const [
                             DropdownMenuItem(value: 6, child: Text('6')),
@@ -175,9 +219,9 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
                       Expanded(
                         child: DropdownButtonFormField<OtpAlgorithm>(
                           value: _algorithm,
-                          decoration: const InputDecoration(
+                          decoration: InputDecoration(
                             labelText: 'Algoritma',
-                            border: OutlineInputBorder(),
+                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
                           ),
                           items: const [
                             DropdownMenuItem(value: OtpAlgorithm.sha1, child: Text('SHA1')),
@@ -192,9 +236,9 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
                         Expanded(
                           child: TextFormField(
                             initialValue: '$_period',
-                            decoration: const InputDecoration(
+                            decoration: InputDecoration(
                               labelText: 'Periyot (sn)',
-                              border: OutlineInputBorder(),
+                              border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
                             ),
                             keyboardType: TextInputType.number,
                             onChanged: (v) => _period = int.tryParse(v) ?? 30,
@@ -206,12 +250,15 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
                   const SizedBox(height: 24),
                   FilledButton(
                     onPressed: _saveManual,
-                    style: FilledButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 16)),
+                    style: FilledButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                    ),
                     child: const Text('Kaydet'),
                   ),
                 ],
               ),
-            ),
+            ).animate(delay: 150.ms).fadeIn(duration: 350.ms).slideY(begin: 0.08, end: 0),
           ],
         ),
       ),

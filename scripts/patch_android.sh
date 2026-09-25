@@ -68,12 +68,14 @@ def replace_release_block(text, new_block):
     'release' specifically and replace just that inner block, leaving
     the rest of buildTypes (e.g. debug {}) untouched."""
     bt_idx = text.index("buildTypes {")
+    # locate whichever header form is present after buildTypes {
     candidates = []
     for header in ('release {', 'getByName("release") {'):
         pos = text.find(header, bt_idx)
         if pos != -1:
             candidates.append((pos, header))
     if not candidates:
+        # No release block found (unexpected) — just insert after buildTypes {
         idx = bt_idx + len("buildTypes {")
         return text[:idx] + "\n" + new_block + text[idx:]
     candidates.sort()

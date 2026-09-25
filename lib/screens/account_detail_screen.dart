@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import 'package:provider/provider.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import '../models/otp_account.dart';
 import '../services/account_store.dart';
 import '../services/otpauth_uri.dart';
+import '../theme/app_theme.dart';
 
 class AccountDetailScreen extends StatefulWidget {
   final OtpAccount account;
@@ -37,6 +39,7 @@ class _AccountDetailScreenState extends State<AccountDetailScreen> {
   }
 
   Future<void> _delete() async {
+    HapticFeedback.mediumImpact();
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -57,12 +60,13 @@ class _AccountDetailScreenState extends State<AccountDetailScreen> {
   @override
   Widget build(BuildContext context) {
     final uri = OtpAuthUri.build(widget.account);
+    final gradient = AppTheme.gradientFor(widget.account.displayName);
 
     return Scaffold(
       appBar: AppBar(
         title: const Text('Hesap Ayrıntıları'),
         actions: [
-          IconButton(icon: const Icon(Icons.delete_outline), onPressed: _delete),
+          IconButton(icon: const Icon(Icons.delete_outline_rounded), onPressed: _delete),
         ],
       ),
       body: SingleChildScrollView(
@@ -70,17 +74,64 @@ class _AccountDetailScreenState extends State<AccountDetailScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
+            Center(
+              child: Container(
+                width: 76,
+                height: 76,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: LinearGradient(
+                    colors: gradient,
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: gradient.first.withValues(alpha: 0.4),
+                      blurRadius: 20,
+                      offset: const Offset(0, 8),
+                    ),
+                  ],
+                ),
+                alignment: Alignment.center,
+                child: Text(
+                  widget.account.displayName.isNotEmpty
+                      ? widget.account.displayName[0].toUpperCase()
+                      : '?',
+                  style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 30),
+                ),
+              ),
+            ).animate().scale(
+                  begin: const Offset(0.6, 0.6),
+                  end: const Offset(1, 1),
+                  duration: 380.ms,
+                  curve: Curves.easeOutBack,
+                ).fadeIn(duration: 250.ms),
+            const SizedBox(height: 24),
             TextField(
               controller: _issuerCtrl,
-              decoration: const InputDecoration(labelText: 'Servis adı', border: OutlineInputBorder()),
+              decoration: InputDecoration(
+                labelText: 'Servis adı',
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
+              ),
             ),
             const SizedBox(height: 12),
             TextField(
               controller: _labelCtrl,
-              decoration: const InputDecoration(labelText: 'Hesap / e-posta', border: OutlineInputBorder()),
+              decoration: InputDecoration(
+                labelText: 'Hesap / e-posta',
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
+              ),
             ),
             const SizedBox(height: 20),
-            FilledButton(onPressed: _save, child: const Text('Kaydet')),
+            FilledButton(
+              onPressed: _save,
+              style: FilledButton.styleFrom(
+                padding: const EdgeInsets.symmetric(vertical: 14),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+              ),
+              child: const Text('Kaydet'),
+            ),
             const SizedBox(height: 28),
             Row(
               children: const [
@@ -102,32 +153,61 @@ class _AccountDetailScreenState extends State<AccountDetailScreen> {
             const SizedBox(height: 12),
             OutlinedButton.icon(
               onPressed: () => setState(() => _showQr = !_showQr),
-              icon: Icon(_showQr ? Icons.visibility_off : Icons.qr_code),
+              icon: AnimatedRotation(
+                turns: _showQr ? 0.5 : 0,
+                duration: const Duration(milliseconds: 250),
+                child: Icon(_showQr ? Icons.expand_less_rounded : Icons.qr_code_rounded),
+              ),
               label: Text(_showQr ? 'QR Kodu Gizle' : 'Yedekleme QR Kodunu Göster'),
+              style: OutlinedButton.styleFrom(
+                padding: const EdgeInsets.symmetric(vertical: 14),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+              ),
             ),
-            if (_showQr) ...[
-              const SizedBox(height: 20),
-              Center(
-                child: Container(
-                  padding: const EdgeInsets.all(16),
-                  color: Colors.white,
-                  child: QrImageView(data: uri, size: 220),
-                ),
-              ),
-              const SizedBox(height: 12),
-              Center(
-                child: TextButton.icon(
-                  onPressed: () {
-                    Clipboard.setData(ClipboardData(text: widget.account.secretBase32));
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Gizli anahtar kopyalandı')),
-                    );
-                  },
-                  icon: const Icon(Icons.copy),
-                  label: const Text('Gizli anahtarı kopyala'),
-                ),
-              ),
-            ],
+            AnimatedSize(
+              duration: const Duration(milliseconds: 280),
+              curve: Curves.easeOutCubic,
+              child: _showQr
+                  ? Column(
+                      children: [
+                        const SizedBox(height: 20),
+                        Center(
+                          child: Container(
+                            padding: const EdgeInsets.all(16),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(18),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: gradient.first.withValues(alpha: 0.3),
+                                  blurRadius: 24,
+                                  offset: const Offset(0, 10),
+                                ),
+                              ],
+                            ),
+                            child: QrImageView(data: uri, size: 220),
+                          ),
+                        )
+                            .animate()
+                            .fadeIn(duration: 300.ms)
+                            .scale(begin: const Offset(0.9, 0.9), end: const Offset(1, 1)),
+                        const SizedBox(height: 12),
+                        Center(
+                          child: TextButton.icon(
+                            onPressed: () {
+                              Clipboard.setData(ClipboardData(text: widget.account.secretBase32));
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(content: Text('Gizli anahtar kopyalandı')),
+                              );
+                            },
+                            icon: const Icon(Icons.copy_rounded),
+                            label: const Text('Gizli anahtarı kopyala'),
+                          ),
+                        ),
+                      ],
+                    )
+                  : const SizedBox(width: double.infinity),
+            ),
           ],
         ),
       ),
