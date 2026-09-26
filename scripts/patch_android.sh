@@ -158,4 +158,18 @@ print("Signing + minify-off wired into", path)
 PY
 fi
 
+# 3) MainActivity → FlutterFragmentActivity (required by local_auth's
+#    biometric prompt, which needs a FragmentActivity host) ------------
+MAIN_ACTIVITY_KT=$(find android/app/src/main -name "MainActivity.kt" 2>/dev/null | head -n1 || true)
+MAIN_ACTIVITY_JAVA=$(find android/app/src/main -name "MainActivity.java" 2>/dev/null | head -n1 || true)
+
+if [ -n "${MAIN_ACTIVITY_KT:-}" ] && [ -f "$MAIN_ACTIVITY_KT" ] && grep -q "FlutterActivity" "$MAIN_ACTIVITY_KT" && ! grep -q "FlutterFragmentActivity" "$MAIN_ACTIVITY_KT"; then
+  sed -i 's/FlutterActivity/FlutterFragmentActivity/g' "$MAIN_ACTIVITY_KT"
+  echo "MainActivity.kt -> FlutterFragmentActivity"
+elif [ -n "${MAIN_ACTIVITY_JAVA:-}" ] && [ -f "$MAIN_ACTIVITY_JAVA" ] && grep -q "FlutterActivity" "$MAIN_ACTIVITY_JAVA" && ! grep -q "FlutterFragmentActivity" "$MAIN_ACTIVITY_JAVA"; then
+  sed -i 's/FlutterActivity/FlutterFragmentActivity/g' "$MAIN_ACTIVITY_JAVA"
+  echo "MainActivity.java -> FlutterFragmentActivity"
+fi
+
 echo "patch_android.sh tamamlandı"
+

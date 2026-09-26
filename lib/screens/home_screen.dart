@@ -11,6 +11,7 @@ import '../widgets/code_ring.dart';
 import '../widgets/animated_code_text.dart';
 import 'add_account_screen.dart';
 import 'account_detail_screen.dart';
+import 'settings_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -175,6 +176,15 @@ class _HomeScreenState extends State<HomeScreen> {
               }
             }),
           ),
+          if (!_searching) ...[
+            const SizedBox(width: 8),
+            IconButton.filledTonal(
+              icon: const Icon(Icons.settings_rounded),
+              onPressed: () => Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => const SettingsScreen()),
+              ),
+            ),
+          ],
         ],
       ),
     );
