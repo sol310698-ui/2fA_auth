@@ -42,17 +42,9 @@ class _HomeScreenState extends State<HomeScreen> {
     super.dispose();
   }
 
-  void _copy(String code, String name) {
+  void _copy(String code) {
     HapticFeedback.lightImpact();
     Clipboard.setData(ClipboardData(text: code));
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('$name kodu kopyalandı'),
-        duration: const Duration(seconds: 1),
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      ),
-    );
   }
 
   @override
@@ -230,7 +222,7 @@ class _AnimatedFabState extends State<_AnimatedFab> with SingleTickerProviderSta
 class _AccountTile extends StatelessWidget {
   final OtpAccount account;
   final int index;
-  final void Function(String code, String name) onCopy;
+  final void Function(String code) onCopy;
 
   const _AccountTile({
     super.key,
@@ -256,7 +248,7 @@ class _AccountTile extends StatelessWidget {
         period: account.period,
         color: gradient.first,
       );
-      onTap = () => onCopy(code, account.displayName);
+      onTap = () => onCopy(code);
     } else {
       code = TotpService.generateHotp(account);
       trailing = IconButton(
@@ -267,7 +259,7 @@ class _AccountTile extends StatelessWidget {
           store.incrementHotpCounter(account.id);
         },
       );
-      onTap = () => onCopy(code, account.displayName);
+      onTap = () => onCopy(code);
     }
 
     return Dismissible(
